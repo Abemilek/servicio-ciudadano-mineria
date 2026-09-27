@@ -11,6 +11,9 @@ numpy==1.26.4
 matplotlib==3.8.4
 seaborn==0.12.2
 
+# Minería de datos / modelos
+scikit-learn==1.4.2
+
 # Conexión a SQL Server
 pyodbc==5.1.0
 SQLAlchemy==2.0.36

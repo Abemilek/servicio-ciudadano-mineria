@@ -15,13 +15,15 @@ Ver justificación completa en [`docs/KPIs_v2.md`](docs/KPIs_v2.md).
 │   └── KPIs_v2.md                  # ficha GQM+SMART de los 2 KPI aprobados
 ├── sql/
 │   ├── 01_datawarehouse.sql        # crea BD, staging y esquema dimensional
-│   └── 02_poblar_dw_y_datasets.sql # ETL (normaliza, deduplica, puebla) + vistas de KPI
+│   ├── 02_poblar_dw_y_datasets.sql # ETL (normaliza, deduplica, puebla) + vistas de KPI
+│   └── 03_dataset_modelo.sql       # vista con todas las variables explicativas (para el modelo)
 ├── src/
 │   ├── database.py                 # conexión (Linux + Docker + ODBC 18)
 │   ├── generar_semilla.py          # genera dataset sintético de prueba (360 regs)
-│   └── cargar_datos.py             # carga los 2 datasets de KPI a pandas
+│   └── cargar_datos.py             # carga los datasets de KPI y del modelo a pandas
 ├── notebooks/
-│   └── 01_kpis_recontacto_duracion.ipynb
+│   ├── 01_kpis_recontacto_duracion.ipynb
+│   └── 02_modelo_recontacto.ipynb  # árbol de decisión sobre recontacto_7_dias
 ├── verificar_instalacion.py
 └── test_conexion.py
 ```
@@ -36,7 +38,9 @@ Ver justificación completa en [`docs/KPIs_v2.md`](docs/KPIs_v2.md).
 6. `python verificar_instalacion.py` y `python test_conexion.py`
 7. `cd src && python generar_semilla.py`
 8. Ejecutar `sql/02_poblar_dw_y_datasets.sql` contra el contenedor
-9. Abrir `notebooks/01_kpis_recontacto_duracion.ipynb`
+9. Ejecutar `sql/03_dataset_modelo.sql` contra el contenedor
+10. Abrir `notebooks/01_kpis_recontacto_duracion.ipynb`
+11. Abrir `notebooks/02_modelo_recontacto.ipynb` (árbol de decisión sobre recontacto_7_dias)
 
 ## Qué esperar en cada paso
 

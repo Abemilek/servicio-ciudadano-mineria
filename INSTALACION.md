@@ -122,17 +122,30 @@ docker exec -it servicio-ciudadano-sqlserver /opt/mssql-tools18/bin/sqlcmd \
   -i /dev/stdin < sql/02_poblar_dw_y_datasets.sql
 ```
 
+Y por último el tercer script (vista con todas las variables explicativas, para el modelo):
+
+```bash
+docker exec -it servicio-ciudadano-sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P 'Integrador2026!' -C \
+  -i /dev/stdin < sql/03_dataset_modelo.sql
+```
+
 Verifica que todo quedó poblado:
 ```bash
 python test_conexion.py
 ```
 
-## 8. Abrir el notebook
+## 8. Abrir los notebooks
 
 **Opción A — VSCodium:** instala la extensión **"Jupyter"** (de Microsoft, disponible
 en Open VSX) y el kernel de Python del entorno virtual (VSCodium te lo pedirá al
 abrir el `.ipynb` — selecciona el intérprete de `venv/bin/python`). Abre
 `notebooks/01_kpis_recontacto_duracion.ipynb` y ejecuta las celdas.
+
+Después, abre `notebooks/02_modelo_recontacto.ipynb` — entrena un árbol de decisión
+sobre `recontacto_7_dias` usando todas las variables explicativas (canal, motivo,
+cola, turno, tipo de usuario, duración, espera, transferencias, casos previos y si
+fue fin de semana). Requiere haber corrido antes el script `sql/03_dataset_modelo.sql`.
 
 **Opción B — JupyterLab en el navegador:**
 ```bash
