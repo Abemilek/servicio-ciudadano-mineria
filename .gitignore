@@ -1,0 +1,26 @@
+# ============================================
+# SERVICIO CIUDADANO 1800 — .gitignore
+# ============================================
+
+# Secretos de conexión (subir SOLO .env.example)
+.env
+
+# Entorno virtual
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

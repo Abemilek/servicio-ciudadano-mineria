@@ -1,0 +1,23 @@
+# ============================================
+# SERVICIO CIUDADANO 1800 - MINERÍA DE DATOS
+# Dependencias (SQL Server en Docker, Linux)
+# ============================================
+
+# Análisis de datos (pines compatibles con Python 3.12)
+pandas==2.2.2
+numpy==1.26.4
+
+# Visualización
+matplotlib==3.8.4
+seaborn==0.12.2
+
+# Conexión a SQL Server
+pyodbc==5.1.0
+SQLAlchemy==2.0.36
+
+# Jupyter (para el notebook)
+jupyterlab==4.0.5
+ipykernel==6.29.0
+
+# Utilidades
+python-dotenv==1.0.0

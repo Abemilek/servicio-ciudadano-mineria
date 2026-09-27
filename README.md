@@ -1,0 +1,64 @@
+# Servicio Ciudadano 1800 — Minería de Datos (KPI v2)
+
+Proyecto adaptado del ejemplo del profesor (SkyTravel) al caso propio del equipo,
+con los 2 indicadores de rendimiento reformulados tras la auditoría de KPI.
+Ver justificación completa en [`docs/KPIs_v2.md`](docs/KPIs_v2.md).
+
+## Contenido
+
+```
+├── docker-compose.yml              # SQL Server en contenedor
+├── .env.example                    # variables de conexión (copiar a .env)
+├── requirements.txt
+├── INSTALACION.md                  # paso a paso para Zorin OS + Docker + VSCodium
+├── docs/
+│   └── KPIs_v2.md                  # ficha GQM+SMART de los 2 KPI aprobados
+├── sql/
+│   ├── 01_datawarehouse.sql        # crea BD, staging y esquema dimensional
+│   └── 02_poblar_dw_y_datasets.sql # ETL (normaliza, deduplica, puebla) + vistas de KPI
+├── src/
+│   ├── database.py                 # conexión (Linux + Docker + ODBC 18)
+│   ├── generar_semilla.py          # genera dataset sintético de prueba (360 regs)
+│   └── cargar_datos.py             # carga los 2 datasets de KPI a pandas
+├── notebooks/
+│   └── 01_kpis_recontacto_duracion.ipynb
+├── verificar_instalacion.py
+└── test_conexion.py
+```
+
+## Orden de ejecución (resumen — detalle completo en INSTALACION.md)
+
+1. `docker compose up -d` → levanta SQL Server
+2. Driver ODBC 18 instalado a nivel de sistema (una sola vez)
+3. `python -m venv venv && source venv/bin/activate && pip install -r requirements.txt`
+4. `cp .env.example .env`
+5. Ejecutar `sql/01_datawarehouse.sql` contra el contenedor
+6. `python verificar_instalacion.py` y `python test_conexion.py`
+7. `cd src && python generar_semilla.py`
+8. Ejecutar `sql/02_poblar_dw_y_datasets.sql` contra el contenedor
+9. Abrir `notebooks/01_kpis_recontacto_duracion.ipynb`
+
+## Qué esperar en cada paso
+
+| Paso | Resultado esperado |
+|---|---|
+| `docker ps` | contenedor `servicio-ciudadano-sqlserver` en estado `Up`/`healthy` |
+| `verificar_instalacion.py` | todas las librerías con ✅, incluyendo `ODBC Driver 18 for SQL Server` en la lista de drivers |
+| `test_conexion.py` (antes del paso 7-8) | conecta, pero las tablas del DW existen con 0 filas |
+| `generar_semilla.py` | mensaje `✅ 365 registros insertados...` (360 + 5 duplicados intencionales) |
+| `test_conexion.py` (después del paso 8) | `c15_callcenter_v0` ≈365, `hecho_interaccion` ≈360 (los duplicados se filtran en el ETL), `vw_kpi_recontacto_7d` ≈354-359 (excluye no consolidados) |
+| Notebook — TR7D global | cercano a 41% (así se calibró la semilla), con Red social y "Falla" como los más altos, replicando los Hallazgos 2 y 3 del caso real |
+| Notebook — DPI por canal | Chat con la duración más alta, Red social con la más baja, replicando el Hallazgo 6 |
+
+## ⚠️ Sobre los datos
+
+Este dataset es **sintético**, generado en `src/generar_semilla.py` para poder
+correr y probar todo el pipeline (Data Warehouse → ETL → dataset → notebook)
+mientras llega el archivo real del caso C15_CallCenter (lo tiene el compañero
+de equipo). Está calibrado para reproducir aproximadamente los hallazgos ya
+documentados en `kpi-audicion.md` (tasas por canal/motivo, duración por canal,
+TR7D global ≈41%), pero **hay supuestos marcados explícitamente en el código**
+(volumen real por canal, cantidad real de duplicados) que hay que corregir en
+cuanto tengan el dataset real — en ese punto, `generar_semilla.py` se reemplaza
+por un script que simplemente cargue el CSV/Excel real a `c15_callcenter_v0`,
+y el resto del pipeline (ETL, vistas, notebook) no necesita cambios.
