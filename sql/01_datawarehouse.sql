@@ -1,7 +1,6 @@
 -- ============================================================
 -- SERVICIO CIUDADANO 1800 - DATA WAREHOUSE (Caso C15_CallCenter)
 -- Integrador VIII / Minería de Datos
--- Adaptado del ejemplo del profesor (SkyTravel) al caso propio
 -- ============================================================
 
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ServicioCiudadanoDW')

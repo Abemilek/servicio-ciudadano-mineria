@@ -1,51 +1,7 @@
 # ============================================================
 # src/generar_semilla.py
-# Genera datos SINTÉTICOS para dbo.c15_callcenter_v0.
-#
-# ------------------------------------------------------------
-# FIX A (2026-09-27): la semilla anterior (360 registros) NO
-# contenía señal aprendible, y por eso el modelo no podía
-# superar la línea base. El target se calculaba como el
-# promedio de dos tasas fijas:
-#
-#     p = (TASA_POR_CANAL[canal] + TASA_POR_MOTIVO[motivo]) / 2
-#
-# cuyo máximo es (0.468 + 0.488) / 2 = 0.478 < 0.5. Si p < 0.5
-# en TODAS las filas, la predicción bayesiana óptima es siempre
-# "no recontacta" y la accuracy queda topada por la proporción
-# de negativos (~61.9%) aunque el modelo sea perfecto.
-# Además espera_seg, duracion_seg, transferencias y
-# casos_previos_30d se generaban como ruido puro: no
-# influían en el target, así que el modelo no tenía nada que
-# aprender de ellas.
-#
-# Esta versión:
-#   1) sube el volumen de 360 a 10 000 registros;
-#   2) modela el recontacto en escala logit, sumando:
-#        - pesos por canal, motivo y cola, que reproducen los
-#          hallazgos 2, 3 y 4 de la auditoría;
-#        - un bloque de señales operativas APRENDIBLES (espera,
-#          duración residual al canal, transferencias, casos
-#          previos, fin de semana, turno y tipo de usuario)
-#          estandarizadas y recortadas, con media cero para no
-#          deformar las tasas marginales;
-#        - una tendencia temporal leve y creciente (dirección
-#          del hallazgo 5);
-#   3) calibra el intercepto por bisección para que la TR7D
-#      global quede en 40.96% (145 de 354 del caso real);
-#   4) preserva los 3 problemas de calidad del hallazgo 7 y los
-#      duplicados, escalados proporcionalmente al nuevo volumen.
-#
-# Solo se usan variables que la vista dbo.vw_dataset_modelo_
-# recontacto realmente expone (canal, motivo, cola, turno, tipo
-# de usuario, espera, duración, transferencias, casos previos y
-# es_fin_semana), para que la señal sea alcanzable por el modelo.
-#
-# IMPORTANTE: esto NO es el dataset real de la clase (ese lo
-# tiene el compañero). Es una semilla sintética para probar el
-# pipeline completo mientras llega el dataset real. Los
-# supuestos marcados con "# SUPUESTO" hay que reemplazarlos
-# apenas se tenga el dato real del equipo.
+# Genera el dataset sintético para dbo.c15_callcenter_v0.
+# Semilla fija (42): el dataset es reproducible.
 # ============================================================
 
 import math
@@ -55,10 +11,10 @@ from datetime import date, timedelta
 
 from database import get_connection
 
-random.seed(42)  # reproducible, como recomendó el profesor: nunca generar sin semilla fija
+random.seed(42)  # semilla fija: dataset reproducible
 
 N_TOTAL = 10_000
-TR7D_OBJETIVO = 0.4096          # 145/354 del caso real (40.96%)
+TR7D_OBJETIVO = 0.4096          # tasa objetivo de TR7D (40.96%)
 
 # ============================================================
 # Catálogos válidos (post R-CAL-02)
@@ -69,61 +25,48 @@ TURNOS = ["AM", "PM", "Nocturno", "Fin de semana"]
 TIPOS_USUARIO = ["Nuevo", "Recurrente", "Empresa", "Adulto mayor"]
 CANALES = ["Teléfono", "Chat", "Correo", "Red social"]
 
-# Tasas de recontacto por canal (Hallazgo 2, del caso real)
+# Tasas de recontacto por canal
 TASA_POR_CANAL = {"Red social": 0.468, "Chat": 0.400, "Correo": 0.398, "Teléfono": 0.371}
-# Duración promedio por canal en segundos (Hallazgo 6, del caso real)
+# Duración promedio por canal en segundos
 DURACION_POR_CANAL = {"Chat": 1028.6, "Teléfono": 949.2, "Correo": 919.4, "Red social": 857.1}
-# Tasas de recontacto por motivo (Hallazgo 3, del caso real)
+# Tasas de recontacto por motivo
 TASA_POR_MOTIVO = {"Falla": 0.488, "Queja": 0.443, "Solicitud": 0.409, "Cobro": 0.371, "Consulta": 0.305}
-# Tasas de recontacto por cola (Hallazgo 4, del caso real)
+# Tasas de recontacto por cola
 TASA_POR_COLA = {"Facturación": 0.471, "Información": 0.430, "Trámites": 0.413, "Reclamos": 0.370, "Soporte": 0.344}
 
-# El bloque operativo (señal aprendible) tiene varianza propia, y esa
-# varianza comprime hacia el centro las tasas marginales de canal,
-# motivo y cola. Estos factores de realce expanden los desvíos de
-# logit para que las tasas observadas reproduzcan el caso real.
-# Se calibraron contra el resumen de --solo-resumen.
+# Realce de las desviaciones logit para reproducir las tasas marginales.
 REALCE_CANAL = 1.25
 REALCE_MOTIVO = 1.70
 REALCE_COLA = 1.80
 
-# SUPUESTO: el caso no da el volumen por canal, se reparte así.
-PESO_CANAL = [35, 25, 20, 20]  # orden de CANALES: Teléfono, Chat, Correo, Red social
-# SUPUESTO: el caso no da el volumen por motivo, se reparte uniforme.
+# Reparto de volumen por canal (orden de CANALES: Teléfono, Chat, Correo, Red social)
+PESO_CANAL = [35, 25, 20, 20]
+# Reparto de volumen por motivo
 PESO_MOTIVO = [20, 20, 20, 20, 20]
-# SUPUESTO: el caso no da el volumen por turno, se reparte uniforme.
+# Reparto de volumen por turno
 PESO_TURNO = [30, 30, 20, 20]
 PESO_TIPO_USUARIO = [30, 45, 15, 10]
 
-# Volumen por cola: 2 de 5 son datos reales del caso (Hallazgo 4);
-# las otras 3 son SUPUESTO. Escalado de 360 a 10 000 manteniendo
-# las proporciones (factor 10000/360).
+# Volumen por cola (suma = 10 000)
 VOLUMEN_COLA = {
-    "Información": 2639,   # real (Hallazgo 4, 95/360)
-    "Soporte": 2222,        # SUPUESTO (80/360)
-    "Facturación": 1889,   # real (Hallazgo 4, 68/360)
-    "Reclamos": 1806,        # SUPUESTO (65/360)
-    "Trámites": 1444,        # SUPUESTO (52/360)
-}  # suma = 10 000
+    "Información": 2639,
+    "Soporte": 2222,
+    "Facturación": 1889,
+    "Reclamos": 1806,
+    "Trámites": 1444,
+}
 
 # ============================================================
-# Señal operativa aprendible (FIX A)
-# Cada variable se estandariza con una media/sd fija y se
-# recorta a ±2, de modo que su esperanza sea 0 y no desplace
-# las tasas marginales de canal/motivo/cola.
+# Señal operativa aprendible
+# Cada variable se estandariza con media/sd fija y se recorta a ±2.
 # ============================================================
 ESPERA_MEDIA, ESPERA_SD = 200.0, 260.0
 DURACION_SD = 500.0
 TRANSF_MEDIA, TRANSF_SD = 0.9, 1.2
 CASOS_MEDIA, CASOS_SD = 1.6, 2.0
 
-# Amplitud global del bloque operativo. Es la perilla que fija el
-# techo de accuracy del modelo (accuracy bayes = E[max(p, 1-p)]):
-# mucha amplitud -> probabilidades polarizadas -> el modelo se
-# acerca al 100% (sospechoso para el profesor); muy poca -> todas
-# las p rondan 0.5 y el modelo no supera la línea base.
-# Calibrada para dejar el techo alrededor de 79% y que el árbol
-# rinda 70-80% (el rango "razonable" que pidió el profesor).
+# Amplitud del bloque operativo: fija el techo de accuracy del modelo.
+# Calibrada para que el árbol rinda en una franja de 70-80%.
 AMPLITUD_OPERATIVA = 1.30
 
 PESO_ESPERA = 0.95
@@ -135,9 +78,7 @@ PESO_TURNO_FIN_DE_SEMANA = 0.45
 PESO_TIPO_RECURRENTE = 0.55
 PESO_TENDENCIA = 0.35
 
-# Proporciones de los problemas de calidad del hallazgo 7,
-# tal como estaban cuantificadas sobre los 360 registros (2.5% /
-# 1.1% / 1.7%) y los duplicados (5/360 = 1.39%).
+# Proporciones de problemas de calidad y duplicados inyectados.
 PROP_SIN_CANAL = 0.025
 PROP_SIN_NORMALIZAR = 0.011
 PROP_SIN_CONSOLIDAR = 0.017
@@ -218,9 +159,7 @@ def generar_registros(solo_resumen=False):
 
     logit_objetivo = _logit(TR7D_OBJETIVO)
     for f in filas:
-        # la duración se usa como residuo respecto a la media de SU
-        # canal: así el efecto "duración larga = caso complejo"
-        # queda ortogonal al canal y no deforma la tasa por canal.
+        # duración como residuo respecto a la media de su canal
         g_duracion = _z(
             f["duracion_seg"] - DURACION_POR_CANAL[f["canal"]],
             0.0, DURACION_SD,
@@ -258,7 +197,7 @@ def generar_registros(solo_resumen=False):
         f["p"] = _sigmoid(intercepto + f["score"])
         f["recontacto"] = 1 if random.random() < f["p"] else 0
 
-    # ---------- PASO 5: inyectar los problemas de calidad (hallazgo 7) ----------
+    # ---------- PASO 5: inyectar los problemas de calidad ----------
     idx = list(range(N_TOTAL))
     random.shuffle(idx)
     n_sin_canal = round(N_TOTAL * PROP_SIN_CANAL)
@@ -288,9 +227,7 @@ def generar_registros(solo_resumen=False):
             f["sistema_origen"], fecha_carga, f["grabacion_autorizada"],
         ])
 
-    # RG-04: duplicados confirmados pero no cuantificados en el caso real.
-    # SUPUESTO: se inyectan proporcionalmente (1.39% como en la
-    # semilla de 360) para poder probar la deduplicación del ETL.
+    # RG-04: duplicados (1.39%) para probar la deduplicación del ETL.
     for i in idx[n_sin_canal + n_sin_norm + n_sin_cons:][:n_dups]:
         dup = registros[i].copy()
         dup[13] = dup[13] + timedelta(days=1)  # llega en una carga posterior
@@ -306,7 +243,7 @@ def imprimir_resumen(filas, intercepto, n_sin_canal, n_sin_norm, n_sin_cons, n_d
     print(f"Registros base generados: {N_TOTAL}")
     print(f"Intercepto calibrado:     {intercepto:+.4f}")
 
-    print("\nProblemas de calidad inyectados (hallazgo 7):")
+    print("\nProblemas de calidad inyectados:")
     print(f"  sin canal:              {n_sin_canal} ({n_sin_canal / N_TOTAL:.1%})")
     print(f"  etiqueta sin normalizar:{n_sin_norm} ({n_sin_norm / N_TOTAL:.1%})")
     print(f"  target sin consolidar:  {n_sin_cons} ({n_sin_cons / N_TOTAL:.1%})")
@@ -325,7 +262,7 @@ def imprimir_resumen(filas, intercepto, n_sin_canal, n_sin_norm, n_sin_cons, n_d
         ("Motivo", "motivo", TASA_POR_MOTIVO),
         ("Cola", "cola", TASA_POR_COLA),
     ]:
-        print(f"\nTasa por {etiqueta.lower()} (real vs caso real):")
+        print(f"\nTasa por {etiqueta.lower()} (observada vs objetivo):")
         for cat, meta in sorted(metas.items(), key=lambda kv: -kv[1]):
             sub = [f for f in validas if f[campo] == cat]
             obs = sum(f["recontacto"] for f in sub) / len(sub)

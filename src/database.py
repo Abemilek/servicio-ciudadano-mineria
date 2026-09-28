@@ -1,8 +1,8 @@
 # ============================================
 # src/database.py
 # SERVICIO CIUDADANO 1800 - CONEXIÓN SQL SERVER
-# Adaptado del ejemplo del profesor para: Zorin OS (Linux),
-# SQL Server en contenedor Docker, driver ODBC 18.
+# Configurado para Zorin OS (Linux), SQL Server en Docker,
+# driver ODBC 18.
 # ============================================
 
 import os

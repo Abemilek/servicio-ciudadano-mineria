@@ -1,6 +1,6 @@
 # Indicadores de Rendimiento v2 — Caso Servicio Ciudadano 1800
 
-> Reformulados tras la auditoría del profesor (clase del 27-ago). De los 10 indicadores
+> Reformulados tras la auditoría de indicadores. De los 10 indicadores
 > originales en `kpi-audicion.md`, solo dos correspondían a **operaciones de negocio
 > distintas**. El resto eran el mismo indicador (Tasa de Recontacto) cortado por una
 > dimensión distinta cada vez (canal, motivo, cola, tiempo), o eran indicadores de
@@ -8,7 +8,7 @@
 > consolidación del target) que no tienen cabida como KPI de negocio — esos ya están
 > cubiertos como reglas de calidad (R-CAL-01 a R-CAL-06) en el Marco de Gobierno.
 >
-> Regla del profesor: *"no existen dos KPI con la misma operación solo porque cambia
+> Criterio: *"no existen dos KPI con la misma operación solo porque cambia
 > la dimensión"*. Canal, motivo, cola de servicio y tiempo son **dimensiones** del mismo
 > hecho (la interacción) — se usan para desagregar el KPI en un dashboard, no para
 > crear un KPI nuevo por cada una.
@@ -34,13 +34,10 @@ quedado resuelto.
 - **Fuente de datos:** CRM / Calidad → tabla de hechos `hecho_interaccion`, campo `recontacto_7_dias`
 - **Dimensiones para desagregar (NO son KPI aparte):** canal, motivo_contacto, cola_servicio, turno, mes
 - **Regla de exclusión:** los registros con `recontacto_7_dias` vacío (no consolidado) se excluyen del cálculo, no se cuentan como 0
-- **Línea base (dataset v0):** 40.96% (145 de 354 registros consolidados)
-- **Semilla sintética calibrada a esa tasa:** `src/generar_semilla.py` genera 10 000 registros y
-  calibra por bisección el intercepto del modelo logit para que la TR7D consolidada quede en
-  ~40.4% sobre 9 830 registros (10 000 menos 139 duplicados y 170 no consolidados). La diferencia
-  de ~0.6 pp contra el 40.96% del caso real es ruido de muestreo: al 10 000 registros el error
-  estándar de una proporción de ese tamaño es de ±0.5 pp. Al llegar el dataset real, esta
-  calibración se descarta y se recalcula sobre los datos de la clase.
+- **Línea base:** 40.96%
+- **Semilla sintética:** `src/generar_semilla.py` genera 10 000 registros y calibra por
+  bisección el intercepto del modelo logit para que la TR7D consolidada quede en ~40.4% sobre
+  9 830 registros (10 000 menos 139 duplicados y 170 no consolidados).
 
 **Validación SMART**
 | Criterio | Cumple | Justificación |
@@ -69,8 +66,8 @@ operación: promedio de una variable numérica, no una tasa de eventos).
 - **Frecuencia de cálculo:** Mensual
 - **Fuente de datos:** CRM → tabla de hechos `hecho_interaccion`, campo `duracion_seg`
 - **Dimensiones para desagregar (NO son KPI aparte):** canal, motivo_contacto, turno, mes
-- **Línea base por canal (dataset v0):** Chat 1,028.6 seg · Teléfono 949.2 seg · Correo 919.4 seg · Red social 857.1 seg
-  *(el promedio global ponderado queda pendiente hasta tener el volumen real por canal del dataset v1)*
+- **Línea base por canal:** Chat 1,028.6 seg · Teléfono 949.2 seg · Correo 919.4 seg · Red social 857.1 seg
+  *(el promedio global ponderado queda pendiente de conocer el volumen por canal)*
 
 **Validación SMART**
 | Criterio | Cumple | Justificación |

@@ -103,9 +103,9 @@ GO
 
 -- ============================================================
 -- 3. POBLAR TABLA DE HECHOS
---    R-CAL-04 (unicidad): si generar_semilla.py insertó
---    duplicados de id_interaccion a propósito para simular
---    RG-04, aquí se filtran quedándonos con el primero.
+--    R-CAL-04 (unicidad): los duplicados de id_interaccion
+--    inyectados por generar_semilla.py se filtran aquí,
+--    quedándonos con el primero (por fecha_carga).
 -- ============================================================
 ;WITH dedup AS (
     SELECT *,
