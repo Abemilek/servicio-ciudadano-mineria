@@ -19,7 +19,7 @@ Ver justificación completa en [`docs/KPIs_v2.md`](docs/KPIs_v2.md).
 │   └── 03_dataset_modelo.sql       # vista con todas las variables explicativas (para el modelo)
 ├── src/
 │   ├── database.py                 # conexión (Linux + Docker + ODBC 18)
-│   ├── generar_semilla.py          # genera dataset sintético de prueba (360 regs)
+│   ├── generar_semilla.py          # genera dataset sintético de prueba (10 000 regs)
 │   └── cargar_datos.py             # carga los datasets de KPI y del modelo a pandas
 ├── notebooks/
 │   ├── 01_kpis_recontacto_duracion.ipynb
@@ -49,10 +49,11 @@ Ver justificación completa en [`docs/KPIs_v2.md`](docs/KPIs_v2.md).
 | `docker ps` | contenedor `servicio-ciudadano-sqlserver` en estado `Up`/`healthy` |
 | `verificar_instalacion.py` | todas las librerías con ✅, incluyendo `ODBC Driver 18 for SQL Server` en la lista de drivers |
 | `test_conexion.py` (antes del paso 7-8) | conecta, pero las tablas del DW existen con 0 filas |
-| `generar_semilla.py` | mensaje `✅ 365 registros insertados...` (360 + 5 duplicados intencionales) |
-| `test_conexion.py` (después del paso 8) | `c15_callcenter_v0` ≈365, `hecho_interaccion` ≈360 (los duplicados se filtran en el ETL), `vw_kpi_recontacto_7d` ≈354-359 (excluye no consolidados) |
-| Notebook — TR7D global | cercano a 41% (así se calibró la semilla), con Red social y "Falla" como los más altos, replicando los Hallazgos 2 y 3 del caso real |
+| `generar_semilla.py` | mensaje `✅ 10 139 registros insertados...` (10 000 + 139 duplicados intencionales). Con `--solo-resumen` imprime el TR7D, las tasas por canal/motivo/cola y el techo de accuracy esperado, sin tocar la base de datos |
+| `test_conexion.py` (después del paso 8) | `c15_callcenter_v0` =10 139, `hecho_interaccion` =10 000 (los duplicados se filtran en el ETL), `vw_kpi_recontacto_7d` =9 830 (excluye los 170 no consolidados) |
+| Notebook — TR7D global | cercano a 40.4% (la semilla se calibra a 40.96%), con Red social y "Falla" como los más altos, replicando los Hallazgos 2 y 3 del caso real |
 | Notebook — DPI por canal | Chat con la duración más alta, Red social con la más baja, replicando el Hallazgo 6 |
+| Notebook 02 — accuracy | la línea base queda en ~59.6% y el árbol `max_depth=5` (la profundidad que sugiere el profesor) en ~72.7%: el modelo supera claramente a no hacer nada |
 
 ## ⚠️ Sobre los datos
 

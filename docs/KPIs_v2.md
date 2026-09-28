@@ -35,6 +35,12 @@ quedado resuelto.
 - **Dimensiones para desagregar (NO son KPI aparte):** canal, motivo_contacto, cola_servicio, turno, mes
 - **Regla de exclusión:** los registros con `recontacto_7_dias` vacío (no consolidado) se excluyen del cálculo, no se cuentan como 0
 - **Línea base (dataset v0):** 40.96% (145 de 354 registros consolidados)
+- **Semilla sintética calibrada a esa tasa:** `src/generar_semilla.py` genera 10 000 registros y
+  calibra por bisección el intercepto del modelo logit para que la TR7D consolidada quede en
+  ~40.4% sobre 9 830 registros (10 000 menos 139 duplicados y 170 no consolidados). La diferencia
+  de ~0.6 pp contra el 40.96% del caso real es ruido de muestreo: al 10 000 registros el error
+  estándar de una proporción de ese tamaño es de ±0.5 pp. Al llegar el dataset real, esta
+  calibración se descarta y se recalcula sobre los datos de la clase.
 
 **Validación SMART**
 | Criterio | Cumple | Justificación |

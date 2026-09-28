@@ -109,7 +109,9 @@ python verificar_instalacion.py     # confirma que todo esté instalado
 python test_conexion.py             # confirma que conecta (aún sin datos)
 
 cd src
-python generar_semilla.py           # inserta ~365 registros sintéticos en c15_callcenter_v0
+python generar_semilla.py           # inserta 10 139 registros sintéticos en c15_callcenter_v0
+                                     # (10 000 base + 139 duplicados); con --solo-resumen
+                                     # solo imprime el resumen, sin tocar la base
 cd ..
 ```
 

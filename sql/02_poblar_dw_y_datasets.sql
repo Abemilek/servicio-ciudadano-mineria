@@ -37,6 +37,32 @@ FROM dbo.c15_callcenter_v0;
 GO
 
 -- ============================================================
+-- 1.b RESET — el ETL debe poder RE-EJECUTARSE sin duplicar
+--     El staging se regenera completo con generar_semilla.py, así
+--     que aqui se vacian las dimensiones y el hecho para que una
+--     segunda corrida no mezcle el dataset viejo con el nuevo.
+--     Orden obligatorio: primero la tabla de hechos, porque es la
+--     que tiene las claves foraneas hacia las dimensiones.
+-- ============================================================
+DELETE FROM dbo.hecho_interaccion;
+GO
+DELETE FROM dbo.dim_canal;
+DELETE FROM dbo.dim_motivo;
+DELETE FROM dbo.dim_cola;
+DELETE FROM dbo.dim_turno;
+DELETE FROM dbo.dim_tipo_usuario;
+DELETE FROM dbo.dim_tiempo;
+GO
+-- Las claves IDENTITY siguen la posicion de las filas borradas; se
+-- reinician para que el DW quede siempre en el mismo estado.
+DBCC CHECKIDENT('dbo.dim_canal', RESEED, 0) WITH NO_INFOMSGS;
+DBCC CHECKIDENT('dbo.dim_motivo', RESEED, 0) WITH NO_INFOMSGS;
+DBCC CHECKIDENT('dbo.dim_cola', RESEED, 0) WITH NO_INFOMSGS;
+DBCC CHECKIDENT('dbo.dim_turno', RESEED, 0) WITH NO_INFOMSGS;
+DBCC CHECKIDENT('dbo.dim_tipo_usuario', RESEED, 0) WITH NO_INFOMSGS;
+GO
+
+-- ============================================================
 -- 2. POBLAR DIMENSIONES (a partir del v0 ya normalizado)
 -- ============================================================
 INSERT INTO dbo.dim_canal (canal)

@@ -5,6 +5,10 @@
 # Secretos de conexión (subir SOLO .env.example)
 .env
 
+# Transcripciones del audio del profesor: material de trabajo PRIVADO.
+# Solo se usa como contexto de análisis; NUNCA se versiona.
+audios-teacher/
+
 # Entorno virtual
 venv/
 env/
